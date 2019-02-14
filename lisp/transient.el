@@ -653,6 +653,18 @@ slot is non-nil."
 (defclass transient-switch (transient-argument) ()
   "Class used for command-line argument that can be turned on and off.")
 
+(defclass transient-ternary-switch (transient-switch)
+  ())
+
+(cl-defmethod shared-initialize :after ((obj transient-ternary-switch) _slots)
+  (let ((arg (oref obj argument)))
+    (if (string-match "\\`--\\[no-\\]\\(.+\\)\\'" arg)
+        (oset obj choices
+              (list (concat "--"    (match-string 1 arg))
+                    (concat "--no-" (match-string 1 arg))
+                    eieio-unbound))
+      (error "Invalid ternary switch: %S" arg))))
+
 (defclass transient-option (transient-argument) ()
   "Class used for command-line argument that can take a value.")
 
@@ -2293,6 +2305,12 @@ Non-infix suffix commands usually don't have a value."
         (car (member (oref obj argument)
                      (oref transient--prefix value)))))
 
+(cl-defmethod transient-init-value ((obj transient-ternary-switch))
+  (oset obj value
+        (or (transient--value-match
+             (format "\\`%s\\'" (regexp-opt (butlast (oref obj choices)))))
+            eieio-unbound)))
+
 (cl-defmethod transient-init-value ((obj transient-option))
   (oset obj value
         (transient--value-match (format "\\`%s\\(.*\\)" (oref obj argument)))))
@@ -2401,6 +2419,14 @@ it\", in which case it is pointless to preserve history.)"
 (cl-defmethod transient-infix-read ((obj transient-switch))
   "Toggle the switch on or off."
   (if (oref obj value) nil (oref obj argument)))
+
+(cl-defmethod transient-infix-read ((obj transient-ternary-switch))
+  (let ((choices (oref obj choices)))
+    (or (cadr (member (if (slot-boundp obj 'value)
+                          (oref obj value)
+                        eieio-unbound)
+                      choices))
+        (car choices))))
 
 (cl-defmethod transient-infix-read ((obj transient-switches))
   "Cycle through the mutually exclusive switches.
@@ -2952,6 +2978,15 @@ If the OBJ's `key' is currently unreachable, then apply the face
               'face (if (oref obj value)
                         'transient-argument
                       'transient-inactive-argument)))
+
+(cl-defmethod transient-format-value ((obj transient-ternary-switch))
+  (if (not (slot-boundp obj 'value))
+      (propertize (oref obj argument) 'face 'transient-inactive-argument)
+    (let ((arg (propertize (oref obj argument) 'face 'transient-argument)))
+      (when (equal (oref obj value)
+                   (car (oref obj choices)))
+        (put-text-property 2 7 'face 'transient-inactive-argument arg))
+      arg)))
 
 (cl-defmethod transient-format-value ((obj transient-option))
   (let ((value (oref obj value)))
