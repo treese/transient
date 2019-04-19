@@ -534,7 +534,8 @@ If `transient-save-history' is nil, then do nothing."
    (info-manual :initarg :info-manual :initform nil)
    (transient-suffix     :initarg :transient-suffix     :initform nil)
    (transient-non-suffix :initarg :transient-non-suffix :initform nil)
-   (incompatible         :initarg :incompatible         :initform nil))
+   (incompatible         :initarg :incompatible         :initform nil)
+   (dependant            :initarg :dependant            :initform nil))
   "Transient prefix command.
 
 Each transient prefix command consists of a command, which is
@@ -2522,7 +2523,14 @@ commands."
                                         transient--suffixes)))
               (let ((transient--unset-incompatible nil))
                 (transient-infix-set obj nil)))))
-      (cl-call-next-method obj value))))
+      (cl-call-next-method obj value))
+    (when value
+      (when-let ((arg* (cdr (assoc arg (oref transient--prefix dependant))))
+                 (obj* (cl-find-if (lambda (obj)
+                                     (and (slot-boundp obj 'argument)
+                                          (equal (oref obj argument) arg*)))
+                                   transient--suffixes)))
+        (transient-infix-set obj* t)))))
 
 (cl-defmethod transient-set-value ((obj transient-prefix))
   (oset (oref obj prototype) value (transient-get-value))
