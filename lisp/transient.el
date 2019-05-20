@@ -667,6 +667,14 @@ slot is non-nil."
    (argument-regexp  :initarg :argument-regexp))
   "Class used for sets of mutually exclusive command-line switches.")
 
+(cl-defmethod initialize-instance ((obj transient-switches) slots)
+  (cl-call-next-method obj slots)
+  (unless (slot-boundp obj 'argument-regexp)
+    (oset obj argument-regexp
+          (format (concat "\\(" (regexp-quote (oref obj argument-format))
+                          "\\)")
+                  (regexp-opt (oref obj choices) t)))))
+
 (defclass transient-files (transient-infix) ()
   "Class used for the \"--\" argument.
 All remaining arguments are treated as files.
