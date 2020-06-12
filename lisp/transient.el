@@ -1500,6 +1500,13 @@ of the corresponding object.")
             (make-composed-keymap (list map transient-popup-navigation-map))))
     map))
 
+(defun transient--make-fake-transient-map (name)
+  (let ((transient-detect-key-conflicts nil)
+        (transient-enable-popup-navigation nil)
+        transient--prefix transient--layout transient--suffixes)
+    (transient--init-objects name layout params)
+    (transient--make-transient-map)))
+
 (defun transient--make-predicate-map ()
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map transient-predicate-map)
